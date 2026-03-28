@@ -29,7 +29,7 @@ function AppLayout() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("dashboard");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showDonateModal, setShowDonateModal] = useState(false);
-  const { user, initialized } = useAuthStore();
+  const { user, profile, initialized } = useAuthStore();
 
   useEffect(() => {
     const handleOpenAddModal = () => setShowAddModal(true);
@@ -64,9 +64,19 @@ function AppLayout() {
     setCurrentScreen("dashboard");
   };
 
+  const handleSignUp = () => {
+    setCurrentScreen("onboard");
+  };
+
   const renderScreen = () => {
+    // Show login if not authenticated
     if (!user && initialized) {
-      return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
+      return <LoginScreen onLoginSuccess={handleLoginSuccess} onSignUp={handleSignUp} />;
+    }
+
+    // Show onboarding if user exists but profile not completed
+    if (user && !profile?.completed) {
+      return <OnboardingScreen onComplete={() => showScreen("dashboard")} />;
     }
 
     switch (currentScreen) {

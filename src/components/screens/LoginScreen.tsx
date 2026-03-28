@@ -3,9 +3,10 @@ import { useAuthStore } from "@/features/authStore";
 
 interface LoginScreenProps {
   onLoginSuccess?: () => void;
+  onSignUp?: () => void;
 }
 
-export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
+export function LoginScreen({ onLoginSuccess, onSignUp }: LoginScreenProps) {
   const { signIn, loading } = useAuthStore();
   const [error, setError] = useState<string | null>(null);
 
@@ -16,6 +17,16 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
       onLoginSuccess?.();
     } catch (err) {
       setError("Failed to sign in. Please try again.");
+    }
+  };
+
+  const handleSignUp = async () => {
+    try {
+      setError(null);
+      await signIn();
+      onSignUp?.();
+    } catch (err) {
+      setError("Failed to sign up. Please try again.");
     }
   };
 
@@ -242,7 +253,7 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
           color: var(--t3);
         }
 
-        .phone-btn {
+        .email-btn {
           width: 100%;
           padding: 14px 20px;
           background: var(--gl);
@@ -259,7 +270,7 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
           transition: all 0.2s;
         }
 
-        .phone-btn:hover {
+        .email-btn:hover {
           background: var(--g);
           color: white;
           border-color: var(--g);
@@ -471,9 +482,27 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
             <div className="divider-line"></div>
           </div>
 
-          <button className="phone-btn" disabled>
-            📱 Continue with Phone Number
+          <button className="email-btn" disabled>
+            ✉️ Continue with Email
           </button>
+
+          <div style={{ marginTop: "1rem", textAlign: "center" }}>
+            <span style={{ color: "var(--t2)", fontSize: "14px" }}>Don't have an account? </span>
+            <button
+              onClick={handleSignUp}
+              style={{
+                background: "none",
+                border: "none",
+                color: "var(--g)",
+                fontSize: "14px",
+                fontWeight: "600",
+                cursor: "pointer",
+                textDecoration: "underline",
+              }}
+            >
+              Sign Up
+            </button>
+          </div>
 
           <p className="login-terms">
             By continuing, you agree to our{" "}
