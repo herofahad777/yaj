@@ -41,7 +41,7 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        yuj: {
+        sewa: {
           green: "#10B981",
           greenDark: "#059669",
           red: "#EF4444",

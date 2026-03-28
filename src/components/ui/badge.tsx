@@ -15,13 +15,13 @@ const badgeVariants = cva(
           "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
         outline: "text-foreground",
         success:
-          "border-transparent bg-yuj-green text-white",
+          "border-transparent bg-sewa-green text-white",
         warning:
-          "border-transparent bg-yuj-orange text-white",
+          "border-transparent bg-sewa-orange text-white",
         danger:
-          "border-transparent bg-yuj-red text-white",
+          "border-transparent bg-sewa-red text-white",
         live:
-          "border-transparent bg-yuj-red text-white live-badge",
+          "border-transparent bg-sewa-red text-white live-badge",
         verified:
           "border-transparent bg-green-500 text-white",
       },

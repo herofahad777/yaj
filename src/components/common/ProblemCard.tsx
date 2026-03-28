@@ -46,7 +46,7 @@ export function ProblemCard({
         ) : urgent ? (
           <span className="badge badge-urgent">Urgent</span>
         ) : null}
-        {verified && <span className="badge badge-verified">✓ Yuj Verified</span>}
+        {verified && <span className="badge badge-verified">✓ Sewa Verified</span>}
       </div>
       <div className="card-body">
         <div className="card-title">{title}</div>

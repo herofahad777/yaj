@@ -1,4 +1,4 @@
-# Yuj - Professional Altruism & Emergency Mobilization Platform
+# Sewa - Professional Altruism & Emergency Mobilization Platform
 
 A real-time platform that unifies doctors, engineers, lawyers, government servants, and volunteers to respond to emergencies and social welfare needs instantly.
 
@@ -100,7 +100,7 @@ src/
 - Mandatory profile completion onboarding
 - Multi-step "Start a Cause" flow
 - Problem cards with progress tracking
-- Yuj Verified badge system
+- Sewa Verified badge system
 - Real-time updates via Supabase
 - Disaster live chat
 - Donation system (Razorpay integration ready)

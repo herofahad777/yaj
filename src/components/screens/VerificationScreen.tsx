@@ -199,7 +199,7 @@ export function VerificationScreen({ onBack, onComplete }: VerificationScreenPro
                 <div className="success-title">Verification Complete!</div>
                 <div className="success-sub">
                   Your {selectedProf?.label} credentials have been verified. You now have a{" "}
-                  <strong>✓ Yuj Verified</strong> badge and can accept help requests in your
+                  <strong>✓ Sewa Verified</strong> badge and can accept help requests in your
                   area.
                 </div>
 

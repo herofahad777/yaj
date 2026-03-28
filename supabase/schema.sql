@@ -1,4 +1,4 @@
--- Yuj Database Schema for Supabase
+-- Sewa Database Schema for Supabase
 -- Run this in your Supabase SQL Editor
 
 -- Enable UUID extension

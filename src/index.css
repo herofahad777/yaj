@@ -20,11 +20,11 @@
   --color-popover-foreground: hsl(var(--popover-foreground));
   --color-card: hsl(var(--card));
   --color-card-foreground: hsl(var(--card-foreground));
-  --color-yuj-green: #10B981;
-  --color-yuj-greenDark: #059669;
-  --color-yuj-red: #EF4444;
-  --color-yuj-orange: #F97316;
-  --color-yuj-blue: #3B82F6;
+  --color-sewa-green: #10B981;
+  --color-sewa-greenDark: #059669;
+  --color-sewa-red: #EF4444;
+  --color-sewa-orange: #F97316;
+  --color-sewa-blue: #3B82F6;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
