@@ -6,10 +6,17 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export async function signInWithGoogle() {
+  // Read redirect URL from .env, fallback to current browser URL
+  const redirectUrl = import.meta.env.VITE_OAUTH_REDIRECT_URL || window.location.origin;
+  
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: window.location.origin,
+      redirectTo: redirectUrl,
+      queryParams: {
+        access_type: 'offline',
+        prompt: 'consent',
+      },
     },
   });
   if (error) throw error;
