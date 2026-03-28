@@ -6,6 +6,9 @@ import { DashboardScreen } from "@/components/screens/DashboardScreen";
 import { DetailScreen } from "@/components/screens/DetailScreen";
 import { DisasterScreen } from "@/components/screens/DisasterScreen";
 import { OnboardingScreen } from "@/components/screens/OnboardingScreen";
+import { ReportProblemScreen } from "@/components/screens/ReportProblemScreen";
+import { VerificationScreen } from "@/components/screens/VerificationScreen";
+import { SOSScreen } from "@/components/screens/SOSScreen";
 import { AddProblemModal } from "@/components/features/AddProblemModal";
 import { DonateModal } from "@/components/features/DonateModal";
 import { useAuthStore } from "@/features/authStore";
@@ -19,7 +22,7 @@ const queryClient = new QueryClient({
   },
 });
 
-type Screen = "dashboard" | "detail" | "onboard" | "disaster";
+type Screen = "dashboard" | "detail" | "onboard" | "disaster" | "report" | "verify" | "sos";
 
 function AppLayout() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("dashboard");
@@ -29,16 +32,28 @@ function AppLayout() {
   useEffect(() => {
     const handleOpenAddModal = () => setShowAddModal(true);
     const handleOpenDonateModal = () => setShowDonateModal(true);
+    const handleOpenSOS = () => setCurrentScreen("sos");
+    const handleOpenReport = () => setCurrentScreen("report");
+    const handleOpenVerify = () => setCurrentScreen("verify");
+    
     window.addEventListener("openAddModal", handleOpenAddModal);
     window.addEventListener("openDonateModal", handleOpenDonateModal);
+    window.addEventListener("openSOS", handleOpenSOS);
+    window.addEventListener("openReport", handleOpenReport);
+    window.addEventListener("openVerify", handleOpenVerify);
+    
     return () => {
       window.removeEventListener("openAddModal", handleOpenAddModal);
       window.removeEventListener("openDonateModal", handleOpenDonateModal);
+      window.removeEventListener("openSOS", handleOpenSOS);
+      window.removeEventListener("openReport", handleOpenReport);
+      window.removeEventListener("openVerify", handleOpenVerify);
     };
   }, []);
 
   const showScreen = (screen: string) => {
-    if (["dashboard", "detail", "onboard", "disaster"].includes(screen)) {
+    const validScreens: Screen[] = ["dashboard", "detail", "onboard", "disaster", "report", "verify", "sos"];
+    if (validScreens.includes(screen as Screen)) {
       setCurrentScreen(screen as Screen);
     }
   };
@@ -61,13 +76,33 @@ function AppLayout() {
           />
         );
       case "onboard":
-        return (
-          <OnboardingScreen onComplete={() => showScreen("dashboard")} />
-        );
+        return <OnboardingScreen onComplete={() => showScreen("dashboard")} />;
       case "disaster":
         return <DisasterScreen />;
+      case "report":
+        return (
+          <ReportProblemScreen
+            onBack={() => showScreen("dashboard")}
+            onSubmit={() => showScreen("dashboard")}
+          />
+        );
+      case "verify":
+        return (
+          <VerificationScreen
+            onBack={() => showScreen("dashboard")}
+            onComplete={() => showScreen("dashboard")}
+          />
+        );
+      case "sos":
+        return <SOSScreen onBack={() => showScreen("dashboard")} />;
       default:
-        return null;
+        return (
+          <DashboardScreen
+            onShowDetail={() => showScreen("detail")}
+            onShowDisaster={() => showScreen("disaster")}
+            onOpenDonate={() => setShowDonateModal(true)}
+          />
+        );
     }
   };
 

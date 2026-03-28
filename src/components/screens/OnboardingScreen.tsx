@@ -8,10 +8,10 @@ interface Role {
 }
 
 const ROLES: Role[] = [
-  { v: "professional", i: "🧑‍⚕️", n: "Professional Helper", d: "Doctor, Lawyer, Engineer…" },
+  { v: "person_in_need", i: "🆘", n: "Person in Need", d: "Report problems & seek help" },
+  { v: "professional", i: "🩺", n: "Professional Helper", d: "Doctor, Lawyer, Engineer..." },
   { v: "volunteer", i: "🙋", n: "Volunteer", d: "Time & skills to give" },
-  { v: "beneficiary", i: "🆘", n: "Person in Need", d: "Seeking help or support" },
-  { v: "government", i: "🏛️", n: "Govt. Servant", d: "Official capacity" },
+  { v: "asha_worker", i: "👩‍⚕️", n: "ASHA Worker", d: "Ground verification" },
 ];
 
 const SKILLS = [
@@ -55,10 +55,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
   const renderStepTrack = () => (
     <div className="step-track">
       {[0, 1, 2, 3].map((i) => (
-        <div
-          key={i}
-          className={`step-seg ${i <= step ? "done" : ""}`}
-        ></div>
+        <div key={i} className={`step-seg ${i <= step ? "done" : ""}`}></div>
       ))}
     </div>
   );
@@ -67,13 +64,18 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
     if (step === 0) {
       return (
         <>
-          <div className="ob-title">Welcome to Yuj 👋</div>
+          <div className="ob-title">Welcome to SEWA 👋</div>
           <div className="ob-sub">
-            Join a network of 12,800+ professionals, volunteers and helpers. Set up
-            your profile in 4 quick steps.
+            A platform connecting those in need with helpers — Report → Verify → Respond.
+            <br />
+            Set up your profile in 4 steps.
           </div>
           <label className="field-lbl">Full Name</label>
-          <input className="field-inp" placeholder="Your full name" defaultValue="Priya Sharma" />
+          <input
+            className="field-inp"
+            placeholder="Your full name"
+            defaultValue="Priya Sharma"
+          />
           <div className="field-row">
             <div>
               <label className="field-lbl">Age</label>
@@ -108,7 +110,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
       return (
         <>
           <div className="ob-title">Choose Your Role</div>
-          <div className="ob-sub">Select all that apply. You can always update this later.</div>
+          <div className="ob-sub">Select all that apply. You can update this later.</div>
           <div className="role-grid">
             {ROLES.map((r) => (
               <div
@@ -123,7 +125,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
             ))}
           </div>
           <div className="ob-actions">
-            <button className="btn-primary" onClick={next}>
+            <button className="btn-primary" onClick={next} disabled={selectedRoles.length === 0}>
               Continue →
             </button>
             <button className="btn-secondary" onClick={back}>
@@ -139,7 +141,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
         <>
           <div className="ob-title">Your Skills & Expertise</div>
           <div className="ob-sub">
-            This helps us match you with the right causes and people who need your help.
+            This helps match you with the right causes and people who need your help.
           </div>
           <div className="skill-tags">
             {SKILLS.map((s) => (
@@ -152,13 +154,8 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
               </span>
             ))}
           </div>
-          <label className="field-lbl">
-            Professional Registration / License Number (optional)
-          </label>
-          <input
-            className="field-inp"
-            placeholder="e.g. MH/12345 · Bar No. · Engineer ID"
-          />
+          <label className="field-lbl">Professional License (optional)</label>
+          <input className="field-inp" placeholder="NMC / Bar Council / License No." />
           <div className="ob-actions">
             <button className="btn-primary" onClick={next}>
               Continue →
@@ -176,14 +173,10 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
         <>
           <div className="ob-title">Add a Profile Photo</div>
           <div className="ob-sub">
-            Help the community recognise you. Your photo builds trust with those who need
-            help.
+            Help the community recognise you. Builds trust with those who need help.
           </div>
           <div className="photo-upload">
-            <div
-              className="photo-circle"
-              onClick={() => setPhotoEmoji("👩")}
-            >
+            <div className="photo-circle" onClick={() => setPhotoEmoji("👩")}>
               {photoEmoji || "+"}
             </div>
             <div className="photo-hint">Tap to upload · JPG or PNG · Max 5MB</div>
@@ -203,13 +196,19 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
     return (
       <div className="success-screen">
         <div className="success-icon">🎉</div>
-        <div className="success-title">Welcome to Yuj, Priya!</div>
+        <div className="success-title">Welcome to SEWA, Priya!</div>
         <div className="success-sub">
-          Your profile is live. You're now part of a network of professionals and
-          volunteers changing lives every day.
+          Your profile is live. You're part of the Report → Verify → Respond pipeline.
+          <br />
+          <br />
+          <strong>Report</strong> problems with GPS + photos
+          <br />
+          <strong>Verify</strong> with ASHA or AI cross-check
+          <br />
+          <strong>Respond</strong> with professionals & volunteers
         </div>
         <button className="btn-primary" onClick={onComplete}>
-          Explore Dashboard →
+          Explore Feed →
         </button>
       </div>
     );

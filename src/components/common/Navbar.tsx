@@ -24,10 +24,9 @@ export function Navbar({ onNavigate, activeScreen = "dashboard" }: NavbarProps) 
     .toUpperCase() || "U";
 
   const navItems = [
-    { id: "dashboard", label: "Dashboard" },
-    { id: "detail", label: "Problem Detail" },
-    { id: "onboard", label: "Onboarding" },
-    { id: "disaster", label: "Disaster Room" },
+    { id: "dashboard", label: "Feed" },
+    { id: "disaster", label: "Disasters" },
+    { id: "verify", label: "Verify" },
   ];
 
   return (
@@ -43,7 +42,7 @@ export function Navbar({ onNavigate, activeScreen = "dashboard" }: NavbarProps) 
           />
           <circle cx="14" cy="8" r="2.5" fill="#1a9e6e" />
         </svg>
-        Yuj
+        SEWA
       </Link>
 
       <div className="nav-links">
@@ -58,8 +57,32 @@ export function Navbar({ onNavigate, activeScreen = "dashboard" }: NavbarProps) 
         ))}
       </div>
 
-      <button className="nav-cta" onClick={() => window.dispatchEvent(new CustomEvent("openAddModal"))}>
-        <span style={{ fontSize: "16px", lineHeight: 1 }}>+</span> Start a Cause
+      <div style={{ display: "flex", gap: "8px", marginLeft: "auto", marginRight: "8px" }}>
+        <button
+          className="nav-btn"
+          style={{
+            background: "#fff1f1",
+            color: "#e54b4b",
+            borderRadius: "20px",
+            padding: "6px 14px",
+          }}
+          onClick={() => window.dispatchEvent(new CustomEvent("openSOS"))}
+        >
+          🚨 SOS
+        </button>
+      </div>
+
+      <button
+        className="nav-btn"
+        style={{
+          background: "var(--gl)",
+          color: "var(--gd)",
+          borderRadius: "20px",
+          padding: "6px 14px",
+        }}
+        onClick={() => window.dispatchEvent(new CustomEvent("openReport"))}
+      >
+        📝 Report
       </button>
 
       {user ? (
@@ -76,15 +99,15 @@ export function Navbar({ onNavigate, activeScreen = "dashboard" }: NavbarProps) 
             <div className="px-2 py-1.5">
               <p className="font-medium text-sm">{profile?.full_name}</p>
               {profile?.is_verified && (
-                <span className="text-xs text-green-600">Yuj Verified</span>
+                <span className="text-xs text-green-600">✓ Verified</span>
               )}
             </div>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link to="/dashboard">Dashboard</Link>
+            <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent("openVerify"))}>
+              🏅 Get Verified
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link to="/profile">Profile</Link>
+              <Link to="/profile">👤 Profile</Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => useAuthStore.getState().signOut()}>
