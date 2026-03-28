@@ -85,22 +85,53 @@ export function Navbar({ onNavigate, activeScreen = "dashboard" }: NavbarProps) 
                   </Avatar>
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <div className="px-2 py-1.5">
-                  <p className="font-medium text-sm">{profile?.full_name}</p>
+              <DropdownMenuContent align="end" className="nav-dropdown">
+                <div className="dropdown-header">
+                  <div className="dropdown-user-info">
+                    <p className="dropdown-name">{profile?.full_name || user?.email?.split('@')[0]}</p>
+                    <p className="dropdown-email">{user?.email}</p>
+                  </div>
                   {profile?.is_verified && (
-                    <span className="text-xs text-green-600">✓ Verified</span>
+                    <span className="verified-badge">
+                      <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+                      </svg>
+                      Verified
+                    </span>
                   )}
                 </div>
+                
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent("openVerify"))}>
-                  🏅 Get Verified
+                
+                <DropdownMenuItem 
+                  className="dropdown-item"
+                  onClick={() => window.dispatchEvent(new CustomEvent("openVerify"))}
+                >
+                  <span className="item-icon">🏅</span>
+                  Get Verified
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/profile">👤 Profile</Link>
+                
+                <DropdownMenuItem asChild className="dropdown-item">
+                  <Link to="/profile">
+                    <span className="item-icon">👤</span>
+                    Account Profile
+                  </Link>
                 </DropdownMenuItem>
+
+                <DropdownMenuItem asChild className="dropdown-item">
+                  <Link to="/settings">
+                    <span className="item-icon">⚙️</span>
+                    Settings
+                  </Link>
+                </DropdownMenuItem>
+                
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => useAuthStore.getState().signOut()}>
+                
+                <DropdownMenuItem 
+                  className="dropdown-item logout"
+                  onClick={() => useAuthStore.getState().signOut()}
+                >
+                  <span className="item-icon">🚪</span>
                   Sign Out
                 </DropdownMenuItem>
               </DropdownMenuContent>

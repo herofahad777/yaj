@@ -2085,3 +2085,104 @@ body {
     margin: 0.5rem;
   }
 }
+
+/* Navbar Dropdown Polish */
+.nav-dropdown {
+  min-width: 240px;
+  padding: 8px;
+  border-radius: 16px;
+  border: 1px solid var(--bd) !important;
+  background: rgba(255, 255, 255, 0.98) !important;
+  backdrop-filter: blur(12px) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12) !important;
+  animation: dropdownFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 1000 !important;
+}
+
+@keyframes dropdownFadeIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.dropdown-header {
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dropdown-user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.dropdown-name {
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--t);
+  line-height: 1.2;
+}
+
+.dropdown-email {
+  font-size: 13px;
+  color: var(--t2);
+  margin-top: 2px;
+}
+
+.verified-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--g);
+  background: var(--gl);
+  padding: 4px 10px;
+  border-radius: 99px;
+  width: fit-content;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.verified-badge svg {
+  width: 14px;
+  height: 14px;
+}
+
+.dropdown-item {
+  display: flex !important;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px !important;
+  border-radius: 10px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: var(--t2) !important;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin: 2px 0;
+}
+
+.dropdown-item:hover {
+  background: var(--gl) !important;
+  color: var(--g) !important;
+  outline: none;
+}
+
+.dropdown-item.logout {
+  color: var(--r) !important;
+}
+
+.dropdown-item.logout:hover {
+  background: #fff1f1 !important;
+  color: var(--r) !important;
+}
+
+.item-icon {
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+}

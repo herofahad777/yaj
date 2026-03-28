@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BrowserRouter } from "react-router-dom";
+import { BrowserRouter as Router } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Navbar } from "@/components/common/Navbar";
 import { DashboardScreen } from "@/components/screens/DashboardScreen";
@@ -22,7 +22,7 @@ const queryClient = new QueryClient({
   },
 });
 
-type Screen = "dashboard" | "detail" | "disaster" | "report" | "verify" | "sos" | "login";
+type Screen = "dashboard" | "detail" | "disaster" | "report" | "verify" | "sos";
 
 function AppLayout() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("dashboard");
@@ -59,14 +59,10 @@ function AppLayout() {
     }
   };
 
-  const handleLoginSuccess = () => {
-    setCurrentScreen("dashboard");
-  };
-
   const renderScreen = () => {
     // Show login if not authenticated
     if (!user && initialized) {
-      return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
+      return <LoginScreen onLoginSuccess={() => setCurrentScreen("dashboard")} />;
     }
 
     switch (currentScreen) {
@@ -122,29 +118,28 @@ function AppLayout() {
         flexDirection: "column",
         alignItems: "center", 
         justifyContent: "center",
-        background: "var(--bg)",
+        background: "#fff",
         gap: "1.5rem"
       }}>
-        <div style={{
-          width: "64px",
-          height: "64px",
-          borderRadius: "50%",
-          border: "4px solid var(--gl)",
-          borderTopColor: "var(--g)",
-          animation: "spin 1s linear infinite"
-        }} />
-        <div style={{
-          fontFamily: "var(--font)",
-          fontSize: "18px",
-          fontWeight: "600",
-          color: "var(--g)",
-          letterSpacing: "2px"
-        }}>SEWA</div>
         <style>{`
-          @keyframes spin {
-            to { transform: rotate(360deg); }
+          @keyframes spin { to { transform: rotate(360deg); } }
+          .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #1a9e6e;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
           }
         `}</style>
+        <div className="spinner"></div>
+        <div style={{
+          fontFamily: "'Sora', sans-serif",
+          fontSize: "18px",
+          fontWeight: "700",
+          color: "#1a9e6e",
+          letterSpacing: "2px"
+        }}>SEWA</div>
       </div>
     );
   }
@@ -154,15 +149,11 @@ function AppLayout() {
   return (
     <div className="flex min-h-screen flex-col">
       {!isLoginScreen && <Navbar onNavigate={showScreen} activeScreen={currentScreen} />}
-      <main className="screen active flex-1" id={`s-${currentScreen}`} style={isLoginScreen ? { padding: 0 } : undefined}>
+      <main className="screen active flex-1" style={isLoginScreen ? { padding: 0 } : undefined}>
         {renderScreen()}
       </main>
-      {!isLoginScreen && (
-        <>
-          <AddProblemModal open={showAddModal} onClose={() => setShowAddModal(false)} />
-          <DonateModal open={showDonateModal} onClose={() => setShowDonateModal(false)} />
-        </>
-      )}
+      <AddProblemModal open={showAddModal} onClose={() => setShowAddModal(false)} />
+      <DonateModal open={showDonateModal} onClose={() => setShowDonateModal(false)} />
     </div>
   );
 }
@@ -171,14 +162,26 @@ export default function App() {
   const { initialize } = useAuthStore();
 
   useEffect(() => {
+    // Initial Auth Load
     initialize();
+
+    // Safety Timeout: Force "initialized" to true after 2.5 seconds
+    // to prevent infinite loading screen on slow networks.
+    const timer = setTimeout(() => {
+      if (!useAuthStore.getState().initialized) {
+        console.warn("Auth initialization timed out. Proceeding...");
+        useAuthStore.setState({ initialized: true });
+      }
+    }, 2500);
+
+    return () => clearTimeout(timer);
   }, [initialize]);
 
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      <Router>
         <AppLayout />
-      </BrowserRouter>
+      </Router>
     </QueryClientProvider>
   );
 }
