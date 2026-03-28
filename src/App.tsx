@@ -9,6 +9,7 @@ import { OnboardingScreen } from "@/components/screens/OnboardingScreen";
 import { ReportProblemScreen } from "@/components/screens/ReportProblemScreen";
 import { VerificationScreen } from "@/components/screens/VerificationScreen";
 import { SOSScreen } from "@/components/screens/SOSScreen";
+import { LoginScreen } from "@/components/screens/LoginScreen";
 import { AddProblemModal } from "@/components/features/AddProblemModal";
 import { DonateModal } from "@/components/features/DonateModal";
 import { useAuthStore } from "@/features/authStore";
@@ -22,12 +23,13 @@ const queryClient = new QueryClient({
   },
 });
 
-type Screen = "dashboard" | "detail" | "onboard" | "disaster" | "report" | "verify" | "sos";
+type Screen = "dashboard" | "detail" | "onboard" | "disaster" | "report" | "verify" | "sos" | "login";
 
 function AppLayout() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("dashboard");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showDonateModal, setShowDonateModal] = useState(false);
+  const { user, initialized } = useAuthStore();
 
   useEffect(() => {
     const handleOpenAddModal = () => setShowAddModal(true);
@@ -58,7 +60,15 @@ function AppLayout() {
     }
   };
 
+  const handleLoginSuccess = () => {
+    setCurrentScreen("dashboard");
+  };
+
   const renderScreen = () => {
+    if (!user && initialized) {
+      return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
+    }
+
     switch (currentScreen) {
       case "dashboard":
         return (
@@ -106,14 +116,20 @@ function AppLayout() {
     }
   };
 
+  const isLoginScreen = !user && initialized;
+
   return (
     <div className="flex min-h-screen flex-col">
-      <Navbar onNavigate={showScreen} activeScreen={currentScreen} />
-      <main className="screen active flex-1" id={`s-${currentScreen}`}>
+      {!isLoginScreen && <Navbar onNavigate={showScreen} activeScreen={currentScreen} />}
+      <main className="screen active flex-1" id={`s-${currentScreen}`} style={isLoginScreen ? { padding: 0 } : undefined}>
         {renderScreen()}
       </main>
-      <AddProblemModal open={showAddModal} onClose={() => setShowAddModal(false)} />
-      <DonateModal open={showDonateModal} onClose={() => setShowDonateModal(false)} />
+      {!isLoginScreen && (
+        <>
+          <AddProblemModal open={showAddModal} onClose={() => setShowAddModal(false)} />
+          <DonateModal open={showDonateModal} onClose={() => setShowDonateModal(false)} />
+        </>
+      )}
     </div>
   );
 }

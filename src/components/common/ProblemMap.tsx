@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { useEffect, useState } from "react";
+import { MapContainer, TileLayer, Marker, Popup, useMap, CircleMarker } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -20,6 +20,12 @@ interface Problem {
     lat: number;
     lng: number;
   };
+}
+
+interface UserLocation {
+  lat: number;
+  lng: number;
+  accuracy?: number;
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -60,27 +66,138 @@ function createColoredIcon(color: string, emoji: string, isUrgent: boolean) {
   });
 }
 
-function MapBoundsUpdater({ problems }: { problems: Problem[] }) {
+function MapBoundsUpdater({ problems, userLocation }: { problems: Problem[]; userLocation: UserLocation | null | undefined }) {
   const map = useMap();
   
   useEffect(() => {
-    if (problems.length > 0) {
-      const validProblems = problems.filter(p => p.locationCoords);
-      if (validProblems.length > 0) {
-        const bounds = L.latLngBounds(
-          validProblems.map(p => [p.locationCoords!.lat, p.locationCoords!.lng] as [number, number])
-        );
-        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
-      }
+    const validProblems = problems.filter(p => p.locationCoords);
+    const allCoords: [number, number][] = [];
+    
+    if (validProblems.length > 0) {
+      validProblems.forEach(p => {
+        allCoords.push([p.locationCoords!.lat, p.locationCoords!.lng]);
+      });
     }
-  }, [problems, map]);
+    
+    if (userLocation) {
+      allCoords.push([userLocation.lat, userLocation.lng]);
+    }
+    
+    if (allCoords.length > 0) {
+      const bounds = L.latLngBounds(allCoords);
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
+    }
+  }, [problems, userLocation, map]);
   
   return null;
 }
 
+function UserLocationMarker({ location }: { location: UserLocation }) {
+  return (
+    <>
+      <CircleMarker
+        center={[location.lat, location.lng]}
+        radius={20}
+        pathOptions={{
+          fillColor: "#3B82F6",
+          fillOpacity: 0.15,
+          color: "#3B82F6",
+          weight: 1,
+          opacity: 0.5,
+        }}
+      />
+      <CircleMarker
+        center={[location.lat, location.lng]}
+        radius={8}
+        pathOptions={{
+          fillColor: "#3B82F6",
+          fillOpacity: 0.8,
+          color: "#ffffff",
+          weight: 2,
+        }}
+      />
+      <Marker
+        position={[location.lat, location.lng]}
+        icon={createUserLocationIcon()}
+      >
+        <Popup>
+          <div style={{ fontFamily: "var(--body)", textAlign: "center", padding: "4px" }}>
+            <div style={{ fontSize: "14px", fontWeight: "600", marginBottom: "4px" }}>
+              📍 Your Location
+            </div>
+            <div style={{ fontSize: "12px", color: "var(--t2)" }}>
+              {location.accuracy && `Accuracy: ±${Math.round(location.accuracy)}m`}
+            </div>
+          </div>
+        </Popup>
+      </Marker>
+    </>
+  );
+}
+
+function createUserLocationIcon() {
+  const html = `
+    <div style="
+      width: 24px;
+      height: 24px;
+      position: relative;
+    ">
+      <div style="
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 12px;
+        height: 12px;
+        background: #3B82F6;
+        border-radius: 50%;
+        border: 3px solid white;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      "></div>
+      <div style="
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 24px;
+        height: 24px;
+        background: rgba(59, 130, 246, 0.2);
+        border-radius: 50%;
+        animation: ripple 2s infinite;
+      "></div>
+    </div>
+  `;
+  return L.divIcon({
+    html,
+    className: "user-marker",
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+  });
+}
+
 export function ProblemMap({ problems, onProblemClick }: ProblemMapProps) {
-  const defaultCenter: [number, number] = [19.076, 72.8777];
-  const defaultZoom = 10;
+  const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
+  
+  const defaultCenter: [number, number] = userLocation 
+    ? [userLocation.lat, userLocation.lng] 
+    : [19.076, 72.8777];
+  const defaultZoom = 12;
+
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+            accuracy: position.coords.accuracy,
+          });
+        },
+        () => {},
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    }
+  }, []);
 
   const validProblems = problems.filter(p => p.locationCoords);
 
@@ -166,7 +283,9 @@ export function ProblemMap({ problems, onProblemClick }: ProblemMapProps) {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         
-        <MapBoundsUpdater problems={validProblems} />
+        <MapBoundsUpdater problems={validProblems} userLocation={userLocation} />
+        
+        {userLocation && <UserLocationMarker location={userLocation} />}
         
         {validProblems.map((problem) => {
           const color = CATEGORY_COLORS[problem.category] || CATEGORY_COLORS.other;
