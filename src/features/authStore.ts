@@ -15,7 +15,26 @@ interface AuthState {
   initialize: () => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+// Helper to fetch profile consistently
+async function fetchProfile(userId: string) {
+  try {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .single();
+    
+    if (error && error.code !== "PGRST116") { // PGRST116 is "no rows returned"
+      console.error("Error fetching profile:", error);
+    }
+    return data || null;
+  } catch (err) {
+    console.error("Unexpected error fetching profile:", err);
+    return null;
+  }
+}
+
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   profile: null,
   loading: false,
@@ -51,19 +70,17 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   initialize: async () => {
+    // Only initialize once
+    if (get().initialized) return;
+
     set({ loading: true });
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        set({ user: session.user });
-        
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", session.user.id)
-          .single();
-        
-        set({ profile: profile || null });
+        const user = session.user;
+        set({ user });
+        const profile = await fetchProfile(user.id);
+        set({ profile });
       }
     } catch (error) {
       console.error("Initialize error:", error);
@@ -73,21 +90,31 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 }));
 
+// Listen for auth state changes
 supabase.auth.onAuthStateChange(async (event, session) => {
   const store = useAuthStore.getState();
   
-  if (event === "SIGNED_IN" && session?.user) {
-    store.setUser(session.user);
-    
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", session.user.id)
-      .single();
-    
-    store.setProfile(profile || null);
+  console.log("Auth Event:", event);
+
+  if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") && session?.user) {
+    const user = session.user;
+    store.setUser(user);
+    const profile = await fetchProfile(user.id);
+    store.setProfile(profile);
   } else if (event === "SIGNED_OUT") {
     store.setUser(null);
     store.setProfile(null);
+  } else if (event === "INITIAL_SESSION") {
+    // initialize() handles this, but we can sync here too if needed
+    if (session?.user) {
+      const user = session.user;
+      store.setUser(user);
+      const profile = await fetchProfile(user.id);
+      store.setProfile(profile);
+    }
+    // Set initialized true if it wasn't already (happens if onAuthStateChange fires before initialize promise resolves)
+    if (!store.initialized) {
+      useAuthStore.setState({ initialized: true });
+    }
   }
 });

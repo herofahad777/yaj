@@ -6,27 +6,29 @@ interface LoginScreenProps {
   onSignUp?: () => void;
 }
 
-export function LoginScreen({ onLoginSuccess, onSignUp }: LoginScreenProps) {
+export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   const { signIn, loading } = useAuthStore();
   const [error, setError] = useState<string | null>(null);
+
+  useState(() => {
+    // Check for errors in the URL (e.g. from Supabase redirect)
+    const params = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const errorMsg = params.get("error_description") || hashParams.get("error_description") || params.get("error") || hashParams.get("error");
+    if (errorMsg) {
+      setError(errorMsg.replace(/\+/g, " "));
+      // Clean URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  });
 
   const handleGoogleLogin = async () => {
     try {
       setError(null);
       await signIn();
       onLoginSuccess?.();
-    } catch (err) {
-      setError("Failed to sign in. Please try again.");
-    }
-  };
-
-  const handleSignUp = async () => {
-    try {
-      setError(null);
-      await signIn();
-      onSignUp?.();
-    } catch (err) {
-      setError("Failed to sign up. Please try again.");
+    } catch (err: any) {
+      setError(err.message || "Failed to sign in. Please try again.");
     }
   };
 
@@ -60,16 +62,6 @@ export function LoginScreen({ onLoginSuccess, onSignUp }: LoginScreenProps) {
           width: 100%;
           height: 100%;
           background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-        }
-
-        .login-hero::after {
-          content: '';
-          position: absolute;
-          bottom: -30%;
-          left: -30%;
-          width: 80%;
-          height: 80%;
-          background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
         }
 
         .hero-content {
@@ -179,7 +171,7 @@ export function LoginScreen({ onLoginSuccess, onSignUp }: LoginScreenProps) {
           font-size: 32px;
           font-weight: 700;
           color: var(--g);
-          margin-bottom: 0.5rem;
+          margin-bottom: 1rem;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -188,27 +180,28 @@ export function LoginScreen({ onLoginSuccess, onSignUp }: LoginScreenProps) {
 
         .login-title {
           font-family: var(--font);
-          font-size: 28px;
+          font-size: 32px;
           font-weight: 700;
           color: var(--t);
-          margin-bottom: 8px;
+          margin-bottom: 12px;
           text-align: center;
         }
 
         .login-subtitle {
-          font-size: 15px;
+          font-size: 16px;
           color: var(--t2);
-          margin-bottom: 2rem;
+          margin-bottom: 3rem;
           text-align: center;
+          line-height: 1.6;
         }
 
         .google-btn {
           width: 100%;
-          padding: 14px 20px;
+          padding: 16px 24px;
           background: white;
           border: 2px solid var(--bd);
-          border-radius: 12px;
-          font-size: 15px;
+          border-radius: 16px;
+          font-size: 16px;
           font-weight: 600;
           color: var(--t);
           cursor: pointer;
@@ -216,94 +209,59 @@ export function LoginScreen({ onLoginSuccess, onSignUp }: LoginScreenProps) {
           align-items: center;
           justify-content: center;
           gap: 12px;
-          transition: all 0.2s;
-          margin-bottom: 1rem;
+          transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+          box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
         }
 
         .google-btn:hover {
           border-color: var(--g);
-          box-shadow: 0 4px 12px rgba(26, 158, 110, 0.15);
-          transform: translateY(-2px);
+          box-shadow: 0 10px 15px -3px rgba(26, 158, 110, 0.2);
+          transform: translateY(-4px);
         }
 
         .google-btn:active {
-          transform: translateY(0);
+          transform: translateY(-2px);
+          box-shadow: 0 4px 6px -1px rgba(26, 158, 110, 0.1);
         }
 
         .google-btn svg {
-          width: 20px;
-          height: 20px;
-        }
-
-        .divider {
-          display: flex;
-          align-items: center;
-          gap: 1rem;
-          margin: 1.5rem 0;
-        }
-
-        .divider-line {
-          flex: 1;
-          height: 1px;
-          background: var(--bd);
-        }
-
-        .divider-text {
-          font-size: 13px;
-          color: var(--t3);
-        }
-
-        .email-btn {
-          width: 100%;
-          padding: 14px 20px;
-          background: var(--gl);
-          border: 2px solid var(--gm);
-          border-radius: 12px;
-          font-size: 15px;
-          font-weight: 600;
-          color: var(--gd);
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 10px;
-          transition: all 0.2s;
-        }
-
-        .email-btn:hover {
-          background: var(--g);
-          color: white;
-          border-color: var(--g);
-        }
-
-        .login-terms {
-          margin-top: 2rem;
-          font-size: 12px;
-          color: var(--t3);
-          text-align: center;
-          line-height: 1.6;
-        }
-
-        .login-terms a {
-          color: var(--g);
-          text-decoration: none;
-        }
-
-        .login-terms a:hover {
-          text-decoration: underline;
+          width: 24px;
+          height: 24px;
         }
 
         .error-message {
           background: #fef2f2;
           border: 1px solid #fecaca;
           color: #dc2626;
-          padding: 12px 16px;
-          border-radius: 10px;
+          padding: 16px;
+          border-radius: 12px;
           font-size: 14px;
-          margin-bottom: 1rem;
+          margin-bottom: 2rem;
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 12px;
+          text-align: left;
+        }
+
+        .login-terms {
+          margin-top: 4rem;
+          font-size: 13px;
+          color: var(--t3);
+          text-align: center;
+          line-height: 1.8;
+          max-width: 320px;
+          margin-left: auto;
+          margin-right: auto;
+        }
+
+        .login-terms a {
+          color: var(--g);
+          text-decoration: none;
+          font-weight: 500;
+        }
+
+        .login-terms a:hover {
+          text-decoration: underline;
         }
 
         @media (max-width: 900px) {
@@ -312,30 +270,21 @@ export function LoginScreen({ onLoginSuccess, onSignUp }: LoginScreenProps) {
           }
 
           .login-hero {
-            padding: 2rem;
+            padding: 3rem 2rem;
+            min-height: 40vh;
           }
 
           .hero-logo {
-            font-size: 36px;
+            font-size: 40px;
           }
 
           .hero-tagline {
-            font-size: 16px;
+            font-size: 18px;
             margin-bottom: 2rem;
           }
 
           .hero-stats {
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-            margin-bottom: 2rem;
-          }
-
-          .hero-stat {
-            padding: 1rem;
-          }
-
-          .hero-stat-value {
-            font-size: 22px;
+            margin-bottom: 0;
           }
 
           .hero-value-props {
@@ -343,21 +292,7 @@ export function LoginScreen({ onLoginSuccess, onSignUp }: LoginScreenProps) {
           }
 
           .login-form {
-            padding: 2rem 1.5rem;
-          }
-
-          .login-title {
-            font-size: 24px;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .hero-stats {
-            grid-template-columns: 1fr;
-          }
-
-          .login-form {
-            padding: 1.5rem;
+            padding: 3rem 2rem;
           }
         }
       `}</style>
@@ -391,28 +326,20 @@ export function LoginScreen({ onLoginSuccess, onSignUp }: LoginScreenProps) {
               <div className="hero-stat-value">₹38Cr</div>
               <div className="hero-stat-label">Funds Mobilised</div>
             </div>
-            <div className="hero-stat">
-              <div className="hero-stat-value">12.8K+</div>
-              <div className="hero-stat-label">Verified Helpers</div>
-            </div>
-            <div className="hero-stat">
-              <div className="hero-stat-value">847</div>
-              <div className="hero-stat-label">Problems Resolved</div>
-            </div>
           </div>
 
           <div className="hero-value-props">
             <div className="value-prop">
               <div className="value-icon">📍</div>
-              <div>Report problems in your area with precise location</div>
+              <div>Report problems with precise GPS tagging</div>
             </div>
             <div className="value-prop">
               <div className="value-icon">🩺</div>
-              <div>Connect with verified doctors, lawyers & professionals</div>
+              <div>Direct chat with verified Professionals</div>
             </div>
             <div className="value-prop">
-              <div className="value-icon">🚨</div>
-              <div>Trigger SOS alerts for emergency response</div>
+              <div className="value-icon">👩‍⚕️</div>
+              <div>Ground verification by ASHA workers</div>
             </div>
           </div>
         </div>
@@ -422,7 +349,7 @@ export function LoginScreen({ onLoginSuccess, onSignUp }: LoginScreenProps) {
       <div className="login-form">
         <div className="login-form-content">
           <div className="login-logo">
-            <svg viewBox="0 0 28 28" fill="none" width="32" height="32">
+            <svg viewBox="0 0 28 28" fill="none" width="40" height="40">
               <circle cx="14" cy="14" r="13" fill="#1a9e6e" opacity="0.15" />
               <path
                 d="M8 10c0 6 6 10 6 10s6-4 6-10"
@@ -435,12 +362,15 @@ export function LoginScreen({ onLoginSuccess, onSignUp }: LoginScreenProps) {
             SEWA
           </div>
 
-          <h1 className="login-title">Welcome Back</h1>
-          <p className="login-subtitle">Sign in to continue making a difference</p>
+          <h1 className="login-title">Get Started</h1>
+          <p className="login-subtitle">
+            Sign in or create an account to start reporting problems and helping your community.
+          </p>
 
           {error && (
             <div className="error-message">
-              ⚠️ {error}
+              <span>⚠️</span>
+              {error}
             </div>
           )}
 
@@ -450,7 +380,7 @@ export function LoginScreen({ onLoginSuccess, onSignUp }: LoginScreenProps) {
             disabled={loading}
           >
             {loading ? (
-              <span>Signing in...</span>
+              <span>Redirecting...</span>
             ) : (
               <>
                 <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -476,38 +406,10 @@ export function LoginScreen({ onLoginSuccess, onSignUp }: LoginScreenProps) {
             )}
           </button>
 
-          <div className="divider">
-            <div className="divider-line"></div>
-            <span className="divider-text">or</span>
-            <div className="divider-line"></div>
-          </div>
-
-          <button className="email-btn" disabled>
-            ✉️ Continue with Email
-          </button>
-
-          <div style={{ marginTop: "1rem", textAlign: "center" }}>
-            <span style={{ color: "var(--t2)", fontSize: "14px" }}>Don't have an account? </span>
-            <button
-              onClick={handleSignUp}
-              style={{
-                background: "none",
-                border: "none",
-                color: "var(--g)",
-                fontSize: "14px",
-                fontWeight: "600",
-                cursor: "pointer",
-                textDecoration: "underline",
-              }}
-            >
-              Sign Up
-            </button>
-          </div>
-
           <p className="login-terms">
-            By continuing, you agree to our{" "}
+            By continuing, you are agreeing to SEWA's{" "}
             <a href="#">Terms of Service</a> and{" "}
-            <a href="#">Privacy Policy</a>
+            <a href="#">Privacy Policy</a>.
           </p>
         </div>
       </div>

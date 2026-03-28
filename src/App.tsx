@@ -5,7 +5,6 @@ import { Navbar } from "@/components/common/Navbar";
 import { DashboardScreen } from "@/components/screens/DashboardScreen";
 import { DetailScreen } from "@/components/screens/DetailScreen";
 import { DisasterScreen } from "@/components/screens/DisasterScreen";
-import { OnboardingScreen } from "@/components/screens/OnboardingScreen";
 import { ReportProblemScreen } from "@/components/screens/ReportProblemScreen";
 import { VerificationScreen } from "@/components/screens/VerificationScreen";
 import { SOSScreen } from "@/components/screens/SOSScreen";
@@ -23,13 +22,13 @@ const queryClient = new QueryClient({
   },
 });
 
-type Screen = "dashboard" | "detail" | "onboard" | "disaster" | "report" | "verify" | "sos" | "login";
+type Screen = "dashboard" | "detail" | "disaster" | "report" | "verify" | "sos" | "login";
 
 function AppLayout() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("dashboard");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showDonateModal, setShowDonateModal] = useState(false);
-  const { user, profile, initialized } = useAuthStore();
+  const { user, initialized } = useAuthStore();
 
   useEffect(() => {
     const handleOpenAddModal = () => setShowAddModal(true);
@@ -54,7 +53,7 @@ function AppLayout() {
   }, []);
 
   const showScreen = (screen: string) => {
-    const validScreens: Screen[] = ["dashboard", "detail", "onboard", "disaster", "report", "verify", "sos"];
+    const validScreens: Screen[] = ["dashboard", "detail", "disaster", "report", "verify", "sos"];
     if (validScreens.includes(screen as Screen)) {
       setCurrentScreen(screen as Screen);
     }
@@ -64,19 +63,10 @@ function AppLayout() {
     setCurrentScreen("dashboard");
   };
 
-  const handleSignUp = () => {
-    setCurrentScreen("onboard");
-  };
-
   const renderScreen = () => {
     // Show login if not authenticated
     if (!user && initialized) {
-      return <LoginScreen onLoginSuccess={handleLoginSuccess} onSignUp={handleSignUp} />;
-    }
-
-    // Show onboarding if user exists but profile not completed
-    if (user && !profile?.completed) {
-      return <OnboardingScreen onComplete={() => showScreen("dashboard")} />;
+      return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
     }
 
     switch (currentScreen) {
@@ -95,8 +85,6 @@ function AppLayout() {
             onOpenDonate={() => setShowDonateModal(true)}
           />
         );
-      case "onboard":
-        return <OnboardingScreen onComplete={() => showScreen("dashboard")} />;
       case "disaster":
         return <DisasterScreen />;
       case "report":
@@ -126,7 +114,42 @@ function AppLayout() {
     }
   };
 
-  const isLoginScreen = !user && initialized;
+  if (!initialized) {
+    return (
+      <div style={{ 
+        height: "100vh", 
+        display: "flex", 
+        flexDirection: "column",
+        alignItems: "center", 
+        justifyContent: "center",
+        background: "var(--bg)",
+        gap: "1.5rem"
+      }}>
+        <div style={{
+          width: "64px",
+          height: "64px",
+          borderRadius: "50%",
+          border: "4px solid var(--gl)",
+          borderTopColor: "var(--g)",
+          animation: "spin 1s linear infinite"
+        }} />
+        <div style={{
+          fontFamily: "var(--font)",
+          fontSize: "18px",
+          fontWeight: "600",
+          color: "var(--g)",
+          letterSpacing: "2px"
+        }}>SEWA</div>
+        <style>{`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  const isLoginScreen = !user;
 
   return (
     <div className="flex min-h-screen flex-col">
