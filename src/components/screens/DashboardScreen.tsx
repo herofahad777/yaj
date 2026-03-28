@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ProblemCard } from "@/components/common/ProblemCard";
+import { ProblemMap } from "@/components/common/ProblemMap";
 import type { ProblemCategory } from "@/types";
 
 interface Problem {
@@ -13,6 +14,7 @@ interface Problem {
   category: ProblemCategory;
   verificationType?: "asha" | "ai" | "community";
   location: string;
+  locationCoords?: { lat: number; lng: number };
   distance?: string;
   slug: string;
 }
@@ -29,6 +31,7 @@ const PROBLEMS: Problem[] = [
     category: "water",
     verificationType: "asha",
     location: "Nashik, Maharashtra",
+    locationCoords: { lat: 19.9975, lng: 73.7898 },
     distance: "2.3 km",
     slug: "water-nashik",
   },
@@ -43,6 +46,7 @@ const PROBLEMS: Problem[] = [
     category: "medical",
     verificationType: "asha",
     location: "Nashik, Maharashtra",
+    locationCoords: { lat: 19.9975, lng: 73.7898 },
     slug: "rohan-kidney",
   },
   {
@@ -56,6 +60,7 @@ const PROBLEMS: Problem[] = [
     category: "other",
     verificationType: "community",
     location: "Solapur, Maharashtra",
+    locationCoords: { lat: 17.6805, lng: 75.9063 },
     slug: "farmer-flood",
   },
   {
@@ -69,6 +74,7 @@ const PROBLEMS: Problem[] = [
     category: "food",
     verificationType: "ai",
     location: "Gadchiroli, Maharashtra",
+    locationCoords: { lat: 19.7167, lng: 80.2667 },
     distance: "5.1 km",
     slug: "midday-meal",
   },
@@ -82,6 +88,7 @@ const PROBLEMS: Problem[] = [
     verified: false,
     category: "education",
     location: "Jaisalmer, Rajasthan",
+    locationCoords: { lat: 26.9157, lng: 70.9168 },
     slug: "school-rajasthan",
   },
   {
@@ -95,6 +102,7 @@ const PROBLEMS: Problem[] = [
     category: "shelter",
     verificationType: "asha",
     location: "Kolhapur, Maharashtra",
+    locationCoords: { lat: 16.705, lng: 74.2439 },
     slug: "house-collapse",
   },
 ];
@@ -152,6 +160,7 @@ interface DashboardScreenProps {
 
 export function DashboardScreen({ onShowDetail, onShowDisaster, onOpenDonate }: DashboardScreenProps) {
   const [currentTab, setCurrentTab] = useState<"feed" | "disaster">("feed");
+  const [viewMode, setViewMode] = useState<"feed" | "map">("feed");
   const [categoryFilter, setCategoryFilter] = useState<ProblemCategory | "all">("all");
   const [sortBy, setSortBy] = useState("urgency");
 
@@ -159,6 +168,10 @@ export function DashboardScreen({ onShowDetail, onShowDisaster, onOpenDonate }: 
     categoryFilter === "all"
       ? PROBLEMS
       : PROBLEMS.filter((p) => p.category === categoryFilter);
+
+  const handleProblemClick = (_slug: string) => {
+    onShowDetail?.();
+  };
 
   return (
     <>
@@ -225,6 +238,37 @@ export function DashboardScreen({ onShowDetail, onShowDisaster, onOpenDonate }: 
             <span style={{ fontSize: "12px", color: "var(--t2)" }}>
               {filteredProblems.length} problems found
             </span>
+            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <button
+                className={`btn ${viewMode === "feed" ? "btn-green" : ""}`}
+                style={{
+                  background: viewMode === "feed" ? "var(--g)" : "var(--bg)",
+                  color: viewMode === "feed" ? "#fff" : "var(--t2)",
+                  padding: "6px 12px",
+                  fontSize: "12px",
+                }}
+                onClick={() => setViewMode("feed")}
+              >
+                📋 Feed
+              </button>
+              <button
+                className={`btn ${viewMode === "map" ? "btn-green" : ""}`}
+                style={{
+                  background: viewMode === "map" ? "var(--g)" : "var(--bg)",
+                  color: viewMode === "map" ? "#fff" : "var(--t2)",
+                  padding: "6px 12px",
+                  fontSize: "12px",
+                }}
+                onClick={() => setViewMode("map")}
+              >
+                🗺️ Map
+              </button>
+            </div>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "12px" }}>
+            <span style={{ fontSize: "12px", color: "var(--t2)" }}>
+              {filteredProblems.length} problems found
+            </span>
             <select
               style={{
                 border: "none",
@@ -248,49 +292,56 @@ export function DashboardScreen({ onShowDetail, onShowDisaster, onOpenDonate }: 
         </div>
       )}
 
-      <div className="cards-grid">
-        {currentTab === "feed" ? (
-          filteredProblems.length === 0 ? (
-            <div style={{ gridColumn: "1/-1", textAlign: "center", padding: "3rem", color: "var(--t2)" }}>
-              <div style={{ fontSize: "48px", marginBottom: "12px" }}>🔍</div>
-              <div style={{ fontWeight: "600" }}>No problems found</div>
-              <div style={{ fontSize: "13px", marginTop: "4px" }}>Try a different category</div>
-            </div>
+      {currentTab === "feed" && viewMode === "map" ? (
+        <ProblemMap
+          problems={filteredProblems}
+          onProblemClick={handleProblemClick}
+        />
+      ) : (
+        <div className="cards-grid">
+          {currentTab === "feed" ? (
+            filteredProblems.length === 0 ? (
+              <div style={{ gridColumn: "1/-1", textAlign: "center", padding: "3rem", color: "var(--t2)" }}>
+                <div style={{ fontSize: "48px", marginBottom: "12px" }}>🔍</div>
+                <div style={{ fontWeight: "600" }}>No problems found</div>
+                <div style={{ fontSize: "13px", marginTop: "4px" }}>Try a different category</div>
+              </div>
+            ) : (
+              filteredProblems.map((p) => (
+                <ProblemCard
+                  key={p.slug}
+                  emoji={p.emoji}
+                  title={p.title}
+                  raised={p.raised}
+                  goal={p.goal}
+                  donors={p.donors}
+                  urgent={p.urgent}
+                  verified={p.verified}
+                  onClick={onShowDetail}
+                  onDonate={onOpenDonate}
+                />
+              ))
+            )
           ) : (
-            filteredProblems.map((p) => (
+            DISASTERS.map((d) => (
               <ProblemCard
-                key={p.slug}
-                emoji={p.emoji}
-                title={p.title}
-                raised={p.raised}
-                goal={p.goal}
-                donors={p.donors}
-                urgent={p.urgent}
-                verified={p.verified}
-                onClick={onShowDetail}
-                onDonate={onOpenDonate}
+                key={d.slug}
+                emoji={d.emoji}
+                title={d.title}
+                raised={d.raised}
+                goal={d.goal}
+                donors={d.donors}
+                urgent={d.urgent}
+                verified={d.verified}
+                live={d.live}
+                isDisaster
+                onClick={onShowDisaster}
+                onJoin={onShowDisaster}
               />
             ))
-          )
-        ) : (
-          DISASTERS.map((d) => (
-            <ProblemCard
-              key={d.slug}
-              emoji={d.emoji}
-              title={d.title}
-              raised={d.raised}
-              goal={d.goal}
-              donors={d.donors}
-              urgent={d.urgent}
-              verified={d.verified}
-              live={d.live}
-              isDisaster
-              onClick={onShowDisaster}
-              onJoin={onShowDisaster}
-            />
-          ))
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </>
   );
 }
