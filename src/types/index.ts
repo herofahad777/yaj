@@ -6,7 +6,8 @@ export type UserRole =
   | "donor"
   | "asha_worker"
   | "ngo"
-  | "government";
+  | "government"
+  | "admin";
 
 // Professional Skills
 export type ProfessionalSkill = 
@@ -61,14 +62,21 @@ export interface Profile {
   avatar_url: string;
   roles: UserRole[];
   skills: ProfessionalSkill[];
-  is_verified: boolean;
-  verification_status: VerificationStatus;
-  is_asha_worker: boolean;
-  verification_documents: string[];
+  is_verified?: boolean;
+  verification_status?: VerificationStatus;
+  is_asha_worker?: boolean;
+  verification_documents?: string[];
   license_number?: string;
   verification_registry?: string; // NMC/Bar Council/Govt DB
-  trust_score: TrustScore;
-  completed: boolean;
+  trust_score?: TrustScore;
+  completed?: boolean;
+  city?: string;
+  district?: string;
+  state?: string;
+  service_radius?: string;
+  latitude?: number;
+  longitude?: number;
+  last_location_update?: string;
   created_at: string;
   updated_at: string;
 }

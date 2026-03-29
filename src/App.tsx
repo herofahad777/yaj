@@ -9,8 +9,12 @@ import { ReportProblemScreen } from "@/components/screens/ReportProblemScreen";
 import { VerificationScreen } from "@/components/screens/VerificationScreen";
 import { SOSScreen } from "@/components/screens/SOSScreen";
 import { LoginScreen } from "@/components/screens/LoginScreen";
+import { AdminScreen } from "@/components/screens/AdminScreen";
+import { ProfileScreen } from "@/components/screens/ProfileScreen";
+import { SettingsScreen } from "@/components/screens/SettingsScreen";
 import { AddProblemModal } from "@/components/features/AddProblemModal";
 import { DonateModal } from "@/components/features/DonateModal";
+import { ResponseModal } from "@/components/features/ResponseModal";
 import { useAuthStore } from "@/features/authStore";
 
 const queryClient = new QueryClient({
@@ -22,12 +26,21 @@ const queryClient = new QueryClient({
   },
 });
 
-type Screen = "dashboard" | "detail" | "disaster" | "report" | "verify" | "sos";
+type Screen = "dashboard" | "detail" | "disaster" | "report" | "verify" | "sos" | "admin" | "profile" | "settings";
+
+interface ResponseProblemData {
+  id: string;
+  title: string;
+  emoji: string;
+  category: string;
+}
 
 function AppLayout() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("dashboard");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showDonateModal, setShowDonateModal] = useState(false);
+  const [showResponseModal, setShowResponseModal] = useState(false);
+  const [responseProblem, setResponseProblem] = useState<ResponseProblemData | null>(null);
   const { user, initialized } = useAuthStore();
 
   useEffect(() => {
@@ -36,12 +49,23 @@ function AppLayout() {
     const handleOpenSOS = () => setCurrentScreen("sos");
     const handleOpenReport = () => setCurrentScreen("report");
     const handleOpenVerify = () => setCurrentScreen("verify");
+    const handleOpenAdmin = () => setCurrentScreen("admin");
+    const handleOpenProfile = () => setCurrentScreen("profile");
+    const handleOpenSettings = () => setCurrentScreen("settings");
+    const handleOpenResponse = (e: CustomEvent<ResponseProblemData>) => {
+      setResponseProblem(e.detail);
+      setShowResponseModal(true);
+    };
     
     window.addEventListener("openAddModal", handleOpenAddModal);
     window.addEventListener("openDonateModal", handleOpenDonateModal);
     window.addEventListener("openSOS", handleOpenSOS);
     window.addEventListener("openReport", handleOpenReport);
     window.addEventListener("openVerify", handleOpenVerify);
+    window.addEventListener("openAdmin", handleOpenAdmin);
+    window.addEventListener("openProfile", handleOpenProfile);
+    window.addEventListener("openSettings", handleOpenSettings);
+    window.addEventListener("openResponseModal", handleOpenResponse as EventListener);
     
     return () => {
       window.removeEventListener("openAddModal", handleOpenAddModal);
@@ -49,11 +73,15 @@ function AppLayout() {
       window.removeEventListener("openSOS", handleOpenSOS);
       window.removeEventListener("openReport", handleOpenReport);
       window.removeEventListener("openVerify", handleOpenVerify);
+      window.removeEventListener("openAdmin", handleOpenAdmin);
+      window.removeEventListener("openProfile", handleOpenProfile);
+      window.removeEventListener("openSettings", handleOpenSettings);
+      window.removeEventListener("openResponseModal", handleOpenResponse as EventListener);
     };
   }, []);
 
   const showScreen = (screen: string) => {
-    const validScreens: Screen[] = ["dashboard", "detail", "disaster", "report", "verify", "sos"];
+    const validScreens: Screen[] = ["dashboard", "detail", "disaster", "report", "verify", "sos", "admin", "profile", "settings"];
     if (validScreens.includes(screen as Screen)) {
       setCurrentScreen(screen as Screen);
     }
@@ -99,6 +127,12 @@ function AppLayout() {
         );
       case "sos":
         return <SOSScreen onBack={() => showScreen("dashboard")} />;
+      case "admin":
+        return <AdminScreen onBack={() => showScreen("dashboard")} />;
+      case "profile":
+        return <ProfileScreen onBack={() => showScreen("dashboard")} />;
+      case "settings":
+        return <SettingsScreen onBack={() => showScreen("dashboard")} />;
       default:
         return (
           <DashboardScreen
@@ -154,6 +188,17 @@ function AppLayout() {
       </main>
       <AddProblemModal open={showAddModal} onClose={() => setShowAddModal(false)} />
       <DonateModal open={showDonateModal} onClose={() => setShowDonateModal(false)} />
+      {responseProblem && (
+        <ResponseModal
+          open={showResponseModal}
+          onClose={() => {
+            setShowResponseModal(false);
+            setResponseProblem(null);
+          }}
+          problem={responseProblem}
+          helperId={user?.id || ""}
+        />
+      )}
     </div>
   );
 }

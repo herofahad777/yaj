@@ -16,6 +16,13 @@ CREATE TABLE profiles (
     is_verified BOOLEAN DEFAULT FALSE,
     skills TEXT[] DEFAULT '{}',
     completed BOOLEAN DEFAULT FALSE,
+    city TEXT,
+    district TEXT,
+    state TEXT,
+    service_radius TEXT DEFAULT 'city',
+    latitude DOUBLE PRECISION,
+    longitude DOUBLE PRECISION,
+    last_location_update TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -31,7 +38,7 @@ CREATE TABLE problems (
     amount_needed BIGINT NOT NULL DEFAULT 0,
     amount_raised BIGINT NOT NULL DEFAULT 0,
     donors_count INTEGER NOT NULL DEFAULT 0,
-    category TEXT NOT NULL CHECK (category IN ('public', 'disaster')) DEFAULT 'public',
+    category TEXT NOT NULL CHECK (category IN ('public', 'disaster', 'medical', 'water', 'food', 'shelter', 'education', 'legal', 'other')) DEFAULT 'public',
     location TEXT,
     is_verified BOOLEAN DEFAULT FALSE,
     verified_by UUID REFERENCES profiles(id),
@@ -235,11 +242,13 @@ CREATE POLICY "Anyone can view problem images"
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO profiles (id, full_name, avatar_url)
+    INSERT INTO profiles (id, full_name, avatar_url, is_verified, roles)
     VALUES (
         NEW.id,
         COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email),
-        NEW.raw_user_meta_data->>'avatar_url'
+        NEW.raw_user_meta_data->>'avatar_url',
+        FALSE,
+        ARRAY['person_in_need']
     );
     RETURN NEW;
 END;
@@ -269,3 +278,175 @@ CREATE TRIGGER update_problems_updated_at
     BEFORE UPDATE ON problems
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
+
+-- ========================================
+-- PROFILES TABLE ADDITIONAL COLUMNS
+-- ========================================
+
+-- Run these separately if columns don't exist:
+-- ALTER TABLE profiles ADD COLUMN IF NOT EXISTS verification_status TEXT DEFAULT 'none';
+-- ALTER TABLE profiles ADD COLUMN IF NOT EXISTS license_number TEXT;
+-- ALTER TABLE profiles ADD COLUMN IF NOT EXISTS verification_registry TEXT;
+-- ALTER TABLE profiles ADD COLUMN IF NOT EXISTS trust_score INT DEFAULT 0;
+-- ALTER TABLE profiles ADD COLUMN IF NOT EXISTS service_radius TEXT DEFAULT 'city';
+-- ALTER TABLE profiles ADD COLUMN IF NOT EXISTS city TEXT;
+-- ALTER TABLE profiles ADD COLUMN IF NOT EXISTS district TEXT;
+-- ALTER TABLE profiles ADD COLUMN IF NOT EXISTS state TEXT;
+
+-- ========================================
+-- VERIFICATION REQUESTS TABLE
+-- ========================================
+
+CREATE TABLE IF NOT EXISTS helper_verification_requests (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    profile_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+    full_name TEXT NOT NULL,
+    profession TEXT NOT NULL,
+    specialization TEXT,
+    license_number TEXT,
+    organization_name TEXT,
+    certificate_url TEXT,
+    id_proof_url TEXT,
+    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+    reviewed_by UUID REFERENCES profiles(id),
+    reviewed_at TIMESTAMPTZ,
+    rejection_reason TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ========================================
+-- PROBLEM RESPONSES TABLE
+-- ========================================
+
+CREATE TABLE IF NOT EXISTS problem_responses (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    problem_id UUID REFERENCES problems(id) ON DELETE CASCADE,
+    helper_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+    response_type TEXT CHECK (response_type IN ('offer_help', 'advice', 'escalate')),
+    message TEXT,
+    status TEXT DEFAULT 'active' CHECK (status IN ('active', 'accepted', 'completed', 'rejected')),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ========================================
+-- RLS POLICIES FOR NEW TABLES
+-- ========================================
+
+ALTER TABLE helper_verification_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE problem_responses ENABLE ROW LEVEL SECURITY;
+
+-- Helper verification requests policies
+CREATE POLICY "Users can create verification requests"
+    ON helper_verification_requests FOR INSERT
+    WITH CHECK (auth.uid() = profile_id);
+
+CREATE POLICY "Users can view their own verification requests"
+    ON helper_verification_requests FOR SELECT
+    USING (auth.uid() = profile_id);
+
+CREATE POLICY "Anyone can view approved verification requests"
+    ON helper_verification_requests FOR SELECT
+    USING (status = 'approved');
+
+CREATE POLICY "Profile owners can update their own requests"
+    ON helper_verification_requests FOR UPDATE
+    USING (auth.uid() = profile_id AND status = 'pending');
+
+-- Problem responses policies
+CREATE POLICY "Anyone can view problem responses"
+    ON problem_responses FOR SELECT USING (true);
+
+CREATE POLICY "Users can create problem responses"
+    ON problem_responses FOR INSERT
+    WITH CHECK (auth.uid() = helper_id);
+
+CREATE POLICY "Response owners can update their responses"
+    ON problem_responses FOR UPDATE
+    USING (auth.uid() = helper_id);
+
+-- ========================================
+-- STORAGE BUCKET FOR VERIFICATION DOCS
+-- ========================================
+
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('verification_docs', 'verification_docs', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Storage policies
+CREATE POLICY "Anyone can view verification documents"
+    ON storage.objects FOR SELECT
+    USING (bucket_id = 'verification_docs');
+
+CREATE POLICY "Authenticated users can upload verification documents"
+    ON storage.objects FOR INSERT
+    WITH CHECK (bucket_id = 'verification_docs' AND auth.uid() IS NOT NULL);
+
+-- ========================================
+-- SOS ALERTS TABLE
+-- ========================================
+
+CREATE TABLE IF NOT EXISTS sos_alerts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+    latitude DOUBLE PRECISION NOT NULL,
+    longitude DOUBLE PRECISION NOT NULL,
+    address TEXT,
+    description TEXT,
+    affected_count INTEGER DEFAULT 1,
+    status TEXT DEFAULT 'active' CHECK (status IN ('active', 'resolved', 'cancelled')),
+    responders_count INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    resolved_at TIMESTAMPTZ
+);
+
+-- ========================================
+-- SOS NOTIFICATIONS TABLE (nearby helpers notified)
+-- ========================================
+
+CREATE TABLE IF NOT EXISTS sos_notifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    sos_alert_id UUID REFERENCES sos_alerts(id) ON DELETE CASCADE,
+    helper_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'declined', 'arrived')),
+    notification_type TEXT DEFAULT 'sos',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    responded_at TIMESTAMPTZ,
+    UNIQUE(sos_alert_id, helper_id)
+);
+
+-- ========================================
+-- RLS POLICIES FOR SOS TABLES
+-- ========================================
+
+ALTER TABLE sos_alerts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sos_notifications ENABLE ROW LEVEL SECURITY;
+
+-- SOS Alerts policies
+CREATE POLICY "Anyone can view active SOS alerts"
+    ON sos_alerts FOR SELECT
+    USING (status = 'active' OR auth.uid() = user_id);
+
+CREATE POLICY "Authenticated users can create SOS alerts"
+    ON sos_alerts FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "SOS creator can update their alerts"
+    ON sos_alerts FOR UPDATE
+    USING (auth.uid() = user_id);
+
+-- SOS Notifications policies
+CREATE POLICY "Helpers can view their SOS notifications"
+    ON sos_notifications FOR SELECT
+    USING (auth.uid() = helper_id);
+
+CREATE POLICY "Helpers can update their SOS notification status"
+    ON sos_notifications FOR UPDATE
+    USING (auth.uid() = helper_id);
+
+-- ========================================
+-- ADD LOCATION FIELDS TO PROFILES (if not exist)
+-- ========================================
+
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS last_location_update TIMESTAMPTZ;

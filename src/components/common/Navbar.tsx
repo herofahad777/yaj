@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -34,7 +33,7 @@ export function Navbar({ onNavigate, activeScreen = "dashboard" }: NavbarProps) 
   return (
     <>
       <nav className="nav">
-        <Link to="/" className="nav-logo">
+        <button className="nav-logo" onClick={() => onNavigate?.("dashboard")}>
           <svg viewBox="0 0 28 28" fill="none" className="w-7 h-7">
             <circle cx="14" cy="14" r="13" fill="#1a9e6e" opacity="0.15" />
             <path
@@ -46,7 +45,7 @@ export function Navbar({ onNavigate, activeScreen = "dashboard" }: NavbarProps) 
             <circle cx="14" cy="8" r="2.5" fill="#1a9e6e" />
           </svg>
           <span className="nav-logo-text">SEWA</span>
-        </Link>
+        </button>
 
         <div className="nav-links desktop-only">
           {navItems.map((item) => (
@@ -103,26 +102,43 @@ export function Navbar({ onNavigate, activeScreen = "dashboard" }: NavbarProps) 
                 
                 <DropdownMenuSeparator />
                 
+                {!profile?.is_verified && (
+                  <DropdownMenuItem 
+                    className="dropdown-item"
+                    onClick={() => window.dispatchEvent(new CustomEvent("openVerify"))}
+                  >
+                    <span className="item-icon">🏅</span>
+                    Get Verified
+                  </DropdownMenuItem>
+                )}
+                
+                {profile?.roles?.includes("admin" as any) && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      className="dropdown-item"
+                      onClick={() => window.dispatchEvent(new CustomEvent("openAdmin"))}
+                    >
+                      <span className="item-icon">⚙️</span>
+                      Admin Panel
+                    </DropdownMenuItem>
+                  </>
+                )}
+                
                 <DropdownMenuItem 
                   className="dropdown-item"
-                  onClick={() => window.dispatchEvent(new CustomEvent("openVerify"))}
+                  onClick={() => window.dispatchEvent(new CustomEvent("openProfile"))}
                 >
-                  <span className="item-icon">🏅</span>
-                  Get Verified
-                </DropdownMenuItem>
-                
-                <DropdownMenuItem asChild className="dropdown-item">
-                  <Link to="/profile">
-                    <span className="item-icon">👤</span>
-                    Account Profile
-                  </Link>
+                  <span className="item-icon">👤</span>
+                  Account Profile
                 </DropdownMenuItem>
 
-                <DropdownMenuItem asChild className="dropdown-item">
-                  <Link to="/settings">
-                    <span className="item-icon">⚙️</span>
-                    Settings
-                  </Link>
+                <DropdownMenuItem 
+                  className="dropdown-item"
+                  onClick={() => window.dispatchEvent(new CustomEvent("openSettings"))}
+                >
+                  <span className="item-icon">⚙️</span>
+                  Settings
                 </DropdownMenuItem>
                 
                 <DropdownMenuSeparator />

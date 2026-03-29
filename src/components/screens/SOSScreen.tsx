@@ -1,37 +1,105 @@
 import { useState } from "react";
+import { createSOSAlert, findNearbyHelpers, notifyNearbyHelpers } from "@/lib/supabaseClient";
+import { useAuthStore } from "@/features/authStore";
 
 interface SOSScreenProps {
   onBack?: () => void;
 }
 
+async function getAddressFromCoords(lat: number, lng: number): Promise<string> {
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+    );
+    const data = await response.json();
+    if (data.display_name) {
+      const parts = data.display_name.split(", ");
+      return parts.slice(0, 3).join(", ");
+    }
+  } catch (e) {
+    console.error("Geocoding error:", e);
+  }
+  return "Location detected";
+}
+
 export function SOSScreen({ onBack }: SOSScreenProps) {
+  const { user } = useAuthStore();
   const [step, setStep] = useState<"confirm" | "broadcasting" | "success">("confirm");
   const [location, setLocation] = useState<{ lat: number; lng: number; address: string } | null>(null);
   const [description, setDescription] = useState("");
   const [affectedCount, setAffectedCount] = useState("");
+  const [notifiedCount, setNotifiedCount] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [showManualLocation, setShowManualLocation] = useState(false);
+  const [manualAddress, setManualAddress] = useState("");
 
   const handleGetLocation = () => {
     if (navigator.geolocation) {
+      setLoading(true);
       navigator.geolocation.getCurrentPosition(
-        (pos) => {
+        async (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          const address = await getAddressFromCoords(lat, lng);
           setLocation({
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-            address: "Detected automatically",
+            lat,
+            lng,
+            address,
           });
+          setLoading(false);
         },
         () => {
           setLocation({ lat: 0, lng: 0, address: "Location access denied" });
+          setLoading(false);
         }
       );
     }
   };
 
-  const handleTrigger = () => {
+  const handleManualLocation = () => {
+    if (!manualAddress.trim()) return;
+    setLocation({
+      lat: 0,
+      lng: 0,
+      address: manualAddress,
+    });
+    setShowManualLocation(false);
+    setManualAddress("");
+  };
+
+  const handleTrigger = async () => {
+    if (!user?.id || !location) return;
+    
+    setLoading(true);
     setStep("broadcasting");
-    setTimeout(() => {
+    
+    try {
+      // Create SOS alert in database
+      const sosAlert = await createSOSAlert({
+        userId: user.id,
+        latitude: location.lat,
+        longitude: location.lng,
+        address: location.address,
+        description,
+        affectedCount: parseInt(affectedCount) || 1,
+      });
+      
+      // Find nearby helpers and notify them
+      const nearbyHelpers = await findNearbyHelpers(location.lat, location.lng, 10);
+      const helperIds = nearbyHelpers.map(h => h.id);
+      
+      if (sosAlert?.id && helperIds.length > 0) {
+        await notifyNearbyHelpers(sosAlert.id, helperIds);
+      }
+      
+      setNotifiedCount(helperIds.length);
       setStep("success");
-    }, 3000);
+    } catch (err) {
+      console.error("SOS Error:", err);
+      setStep("success"); // Still show success even if notification fails
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (step === "broadcasting") {
@@ -69,18 +137,10 @@ export function SOSScreen({ onBack }: SOSScreenProps) {
         <p style={{ color: "var(--t2)", textAlign: "center", maxWidth: "300px" }}>
           Notifying nearby professionals, NGOs, and volunteers
         </p>
-        <div style={{ marginTop: "2rem", display: "flex", gap: "12px", flexWrap: "wrap", justifyContent: "center" }}>
+          <div style={{ marginTop: "2rem", display: "flex", gap: "12px", flexWrap: "wrap", justifyContent: "center" }}>
           <div className="d-stat" style={{ minWidth: "100px" }}>
-            <div className="d-val red">23</div>
-            <div className="d-lbl">Doctors Notified</div>
-          </div>
-          <div className="d-stat" style={{ minWidth: "100px" }}>
-            <div className="d-val orange">12</div>
-            <div className="d-lbl">Engineers</div>
-          </div>
-          <div className="d-stat" style={{ minWidth: "100px" }}>
-            <div className="d-val green">45</div>
-            <div className="d-lbl">Volunteers</div>
+            <div className="d-val red">{notifiedCount}</div>
+            <div className="d-lbl">Helpers Notified</div>
           </div>
         </div>
       </div>
@@ -198,13 +258,44 @@ export function SOSScreen({ onBack }: SOSScreenProps) {
 
         <div className="onboard-card" style={{ width: "100%", maxWidth: "450px" }}>
           <label className="field-lbl">📍 Your Location</label>
-          <button
-            className="btn-primary"
-            style={{ marginBottom: "8px" }}
-            onClick={handleGetLocation}
-          >
-            📍 {location ? "Update Location" : "Get Current Location"}
-          </button>
+          <div style={{ display: "flex", gap: "8px", marginBottom: "8px" }}>
+            <button
+              className="btn-primary"
+              style={{ flex: 1 }}
+              onClick={handleGetLocation}
+              disabled={loading}
+            >
+              {loading ? "📍 Detecting..." : `📍 ${location ? "Update GPS" : "Get Current Location"}`}
+            </button>
+            <button
+              className="btn"
+              style={{ background: "var(--bg)" }}
+              onClick={() => setShowManualLocation(!showManualLocation)}
+            >
+              ✏️ Manual
+            </button>
+          </div>
+          
+          {showManualLocation && (
+            <div style={{ marginBottom: "1rem" }}>
+              <input
+                className="field-inp"
+                type="text"
+                placeholder="Enter address manually (e.g., Mumbai, Maharashtra)"
+                value={manualAddress}
+                onChange={(e) => setManualAddress(e.target.value)}
+                style={{ marginBottom: "8px" }}
+              />
+              <button
+                className="btn"
+                style={{ width: "100%", background: "var(--b)", color: "white" }}
+                onClick={handleManualLocation}
+              >
+                Set Location
+              </button>
+            </div>
+          )}
+          
           {location && (
             <div
               style={{
@@ -216,7 +307,12 @@ export function SOSScreen({ onBack }: SOSScreenProps) {
                 marginBottom: "1rem",
               }}
             >
-              ✓ {location.address}
+              <div style={{ fontWeight: 600 }}>✓ {location.address}</div>
+              {location.lat !== 0 && location.lng !== 0 && (
+                <div style={{ fontSize: "11px", marginTop: "4px", opacity: 0.7 }}>
+                  📍 {location.lat.toFixed(4)}, {location.lng.toFixed(4)}
+                </div>
+              )}
             </div>
           )}
 
@@ -262,7 +358,7 @@ export function SOSScreen({ onBack }: SOSScreenProps) {
               fontSize: "16px",
             }}
             onClick={handleTrigger}
-            disabled={!location}
+            disabled={!location || loading}
           >
             🚨 TRIGGER SOS — BROADCAST NOW
           </button>

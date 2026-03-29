@@ -1,5 +1,7 @@
 import { useState } from "react";
 import type { ProblemCategory } from "@/types";
+import { reportProblem } from "@/lib/supabaseClient";
+import { useAuthStore } from "@/features/authStore";
 
 interface ReportProblemScreenProps {
   onBack?: () => void;
@@ -17,7 +19,24 @@ const CATEGORIES: { value: ProblemCategory; icon: string; label: string }[] = [
   { value: "other", icon: "📋", label: "Other" },
 ];
 
+async function getAddressFromCoords(lat: number, lng: number): Promise<string> {
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+    );
+    const data = await response.json();
+    if (data.display_name) {
+      const parts = data.display_name.split(", ");
+      return parts.slice(0, 3).join(", ");
+    }
+  } catch (e) {
+    console.error("Geocoding error:", e);
+  }
+  return "Location detected";
+}
+
 export function ReportProblemScreen({ onBack, onSubmit }: ReportProblemScreenProps) {
+  const { user } = useAuthStore();
   const [step, setStep] = useState(0);
   const [category, setCategory] = useState<ProblemCategory | null>(null);
   const [title, setTitle] = useState("");
@@ -25,30 +44,61 @@ export function ReportProblemScreen({ onBack, onSubmit }: ReportProblemScreenPro
   const [location, setLocation] = useState<{ lat: number; lng: number; address: string } | null>(null);
   const [amount, setAmount] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showManualLocation, setShowManualLocation] = useState(false);
+  const [manualAddress, setManualAddress] = useState("");
+  const [locationLoading, setLocationLoading] = useState(false);
 
   const handleGetLocation = () => {
     if (navigator.geolocation) {
+      setLocationLoading(true);
       navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setLocation({
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-            address: "Detected automatically",
-          });
+        async (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          const address = await getAddressFromCoords(lat, lng);
+          setLocation({ lat, lng, address });
+          setLocationLoading(false);
         },
         () => {
           setLocation({ lat: 0, lng: 0, address: "Location access denied" });
+          setLocationLoading(false);
         }
       );
     }
   };
 
-  const handleSubmit = () => {
+  const handleManualLocation = () => {
+    if (!manualAddress.trim()) return;
+    setLocation({ lat: 0, lng: 0, address: manualAddress });
+    setShowManualLocation(false);
+    setManualAddress("");
+  };
+
+  const handleSubmit = async () => {
+    if (!user?.id || !title || !description) return;
+    
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    setError(null);
+    
+    try {
+      await reportProblem({
+        userId: user.id,
+        title,
+        description,
+        category: category || 'other',
+        latitude: location?.lat || 0,
+        longitude: location?.lng || 0,
+        address: location?.address,
+        amountNeeded: parseInt(amount) || 0,
+      });
       onSubmit?.();
-    }, 1500);
+    } catch (err: any) {
+      console.error("Error reporting problem:", err);
+      setError(err.message || "Failed to submit problem");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -151,20 +201,46 @@ export function ReportProblemScreen({ onBack, onSubmit }: ReportProblemScreenPro
                   display: "flex",
                   alignItems: "center",
                   gap: "10px",
-                  marginBottom: "1rem",
+                  marginBottom: "8px",
                 }}
               >
                 <button
                   className="btn-primary"
                   style={{ flex: 1 }}
                   onClick={handleGetLocation}
+                  disabled={locationLoading}
                 >
-                  📍 {location ? "Update Location" : "Get Current Location"}
+                  {locationLoading ? "📍 Detecting..." : `📍 ${location ? "Update GPS" : "Get Current Location"}`}
                 </button>
-                {location && (
-                  <span style={{ fontSize: "12px", color: "var(--g)" }}>✓ Detected</span>
-                )}
+                <button
+                  className="btn"
+                  style={{ background: "var(--bg)" }}
+                  onClick={() => setShowManualLocation(!showManualLocation)}
+                >
+                  ✏️ Manual
+                </button>
               </div>
+              
+              {showManualLocation && (
+                <div style={{ marginBottom: "1rem" }}>
+                  <input
+                    className="field-inp"
+                    type="text"
+                    placeholder="Enter address (e.g., Andheri, Mumbai)"
+                    value={manualAddress}
+                    onChange={(e) => setManualAddress(e.target.value)}
+                    style={{ marginBottom: "8px" }}
+                  />
+                  <button
+                    className="btn"
+                    style={{ width: "100%", background: "var(--b)", color: "white" }}
+                    onClick={handleManualLocation}
+                  >
+                    Set Location
+                  </button>
+                </div>
+              )}
+              
               {location && (
                 <div
                   style={{
@@ -176,7 +252,12 @@ export function ReportProblemScreen({ onBack, onSubmit }: ReportProblemScreenPro
                     marginBottom: "1rem",
                   }}
                 >
-                  📍 {location.address}
+                  <div style={{ fontWeight: 600 }}>📍 {location.address}</div>
+                  {location.lat !== 0 && location.lng !== 0 && (
+                    <div style={{ fontSize: "11px", marginTop: "4px", opacity: 0.7 }}>
+                      {location.lat.toFixed(4)}, {location.lng.toFixed(4)}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -239,6 +320,19 @@ export function ReportProblemScreen({ onBack, onSubmit }: ReportProblemScreenPro
               <div className="pending-badge" style={{ marginBottom: "1rem" }}>
                 ⏳ Will go to ASHA Worker / AI Verification
               </div>
+
+              {error && (
+                <div style={{ 
+                  color: "var(--r)", 
+                  background: "#FEE2E2", 
+                  padding: "10px", 
+                  borderRadius: "8px",
+                  marginBottom: "1rem",
+                  fontSize: "13px"
+                }}>
+                  {error}
+                </div>
+              )}
 
               <div className="ob-actions">
                 <button

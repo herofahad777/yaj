@@ -1,111 +1,23 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ProblemCard } from "@/components/common/ProblemCard";
 import { ProblemMap } from "@/components/common/ProblemMap";
 import type { ProblemCategory } from "@/types";
+import { supabase } from "@/lib/supabaseClient";
 
-interface Problem {
-  emoji: string;
-  title: string;
-  raised: number;
-  goal: number;
-  donors: number;
-  urgent: boolean;
-  verified: boolean;
-  category: ProblemCategory;
-  verificationType?: "asha" | "ai" | "community";
-  location: string;
-  locationCoords?: { lat: number; lng: number };
-  distance?: string;
-  slug: string;
-}
-
-const PROBLEMS: Problem[] = [
-  {
-    emoji: "💧",
-    title: "Water Crisis in Ramanujan Colony — 200 Families Without Water for 3 Days",
-    raised: 45000,
-    goal: 120000,
-    donors: 89,
-    urgent: true,
-    verified: true,
-    category: "water",
-    verificationType: "asha",
-    location: "Nashik, Maharashtra",
-    locationCoords: { lat: 19.9975, lng: 73.7898 },
-    distance: "2.3 km",
-    slug: "water-nashik",
-  },
-  {
-    emoji: "🏥",
-    title: "A Single Mother Is Fighting To Save Her Only Son From Rare Kidney Disease",
-    raised: 285400,
-    goal: 620000,
-    donors: 312,
-    urgent: true,
-    verified: true,
-    category: "medical",
-    verificationType: "asha",
-    location: "Nashik, Maharashtra",
-    locationCoords: { lat: 19.9975, lng: 73.7898 },
-    slug: "rohan-kidney",
-  },
-  {
-    emoji: "👩‍🌾",
-    title: "Widow Farmer Needs Help Rebuilding Her Farm After Floods Destroyed Everything",
-    raised: 42000,
-    goal: 150000,
-    donors: 87,
-    urgent: false,
-    verified: true,
-    category: "other",
-    verificationType: "community",
-    location: "Solapur, Maharashtra",
-    locationCoords: { lat: 17.6805, lng: 75.9063 },
-    slug: "farmer-flood",
-  },
-  {
-    emoji: "🍽️",
-    title: "Mid-Day Meal Scheme Halted — 500 Children at Risk of Malnutrition",
-    raised: 78000,
-    goal: 200000,
-    donors: 156,
-    urgent: true,
-    verified: true,
-    category: "food",
-    verificationType: "ai",
-    location: "Gadchiroli, Maharashtra",
-    locationCoords: { lat: 19.7167, lng: 80.2667 },
-    distance: "5.1 km",
-    slug: "midday-meal",
-  },
-  {
-    emoji: "📚",
-    title: "Rural School in Rajasthan Lacks Toilets — 200 Girls Are at Risk of Dropping Out",
-    raised: 98000,
-    goal: 200000,
-    donors: 201,
-    urgent: false,
-    verified: false,
-    category: "education",
-    location: "Jaisalmer, Rajasthan",
-    locationCoords: { lat: 26.9157, lng: 70.9168 },
-    slug: "school-rajasthan",
-  },
-  {
-    emoji: "🏠",
-    title: "Family of 5 Living Under Tarpaulin After Their House Collapsed in Heavy Rains",
-    raised: 22000,
-    goal: 90000,
-    donors: 56,
-    urgent: false,
-    verified: true,
-    category: "shelter",
-    verificationType: "asha",
-    location: "Kolhapur, Maharashtra",
-    locationCoords: { lat: 16.705, lng: 74.2439 },
-    slug: "house-collapse",
-  },
-];
+const getCategoryEmoji = (category: string): string => {
+  const emojis: Record<string, string> = {
+    medical: "🏥",
+    water: "💧",
+    food: "🍽️",
+    shelter: "🏠",
+    disaster: "🚨",
+    education: "📚",
+    legal: "⚖️",
+    other: "📋",
+    public: "📋",
+  };
+  return emojis[category] || "📋";
+};
 
 const DISASTERS = [
   {
@@ -163,15 +75,49 @@ export function DashboardScreen({ onShowDetail, onShowDisaster, onOpenDonate }: 
   const [viewMode, setViewMode] = useState<"feed" | "map">("feed");
   const [categoryFilter, setCategoryFilter] = useState<ProblemCategory | "all">("all");
   const [sortBy, setSortBy] = useState("urgency");
+  const [dbProblems, setDbProblems] = useState<any[]>([]);
+  const [loadingProblems, setLoadingProblems] = useState(true);
+
+  useEffect(() => {
+    loadProblems();
+  }, []);
+
+  const loadProblems = async () => {
+    try {
+      setLoadingProblems(true);
+      const { data, error } = await supabase
+        .from("problems")
+        .select("*")
+        .eq("status", "approved")
+        .order("created_at", { ascending: false });
+      
+      if (error) throw error;
+      setDbProblems(data || []);
+    } catch (err) {
+      console.error("Error loading problems:", err);
+    } finally {
+      setLoadingProblems(false);
+    }
+  };
+
+  // Convert database problems to display format
+  const displayProblems = dbProblems.map((p) => ({
+    slug: p.slug || p.id,
+    emoji: getCategoryEmoji(p.category),
+    title: p.title,
+    raised: p.amount_raised || 0,
+    goal: p.amount_needed || 0,
+    donors: p.donors_count || 0,
+    urgent: false,
+    verified: p.is_verified || false,
+    category: p.category,
+    location: p.location || "",
+  }));
 
   const filteredProblems =
     categoryFilter === "all"
-      ? PROBLEMS
-      : PROBLEMS.filter((p) => p.category === categoryFilter);
-
-  const handleProblemClick = (_slug: string) => {
-    onShowDetail?.();
-  };
+      ? displayProblems
+      : displayProblems.filter((p) => p.category === categoryFilter);
 
   return (
     <>
@@ -236,39 +182,10 @@ export function DashboardScreen({ onShowDetail, onShowDisaster, onOpenDonate }: 
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "12px" }}>
             <span style={{ fontSize: "12px", color: "var(--t2)" }}>
-              {filteredProblems.length} problems found
+              {loadingProblems ? "Loading..." : `${filteredProblems.length} problems found`}
             </span>
-            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-              <button
-                className={`btn ${viewMode === "feed" ? "btn-green" : ""}`}
-                style={{
-                  background: viewMode === "feed" ? "var(--g)" : "var(--bg)",
-                  color: viewMode === "feed" ? "#fff" : "var(--t2)",
-                  padding: "6px 12px",
-                  fontSize: "12px",
-                }}
-                onClick={() => setViewMode("feed")}
-              >
-                📋 Feed
-              </button>
-              <button
-                className={`btn ${viewMode === "map" ? "btn-green" : ""}`}
-                style={{
-                  background: viewMode === "map" ? "var(--g)" : "var(--bg)",
-                  color: viewMode === "map" ? "#fff" : "var(--t2)",
-                  padding: "6px 12px",
-                  fontSize: "12px",
-                }}
-                onClick={() => setViewMode("map")}
-              >
-                🗺️ Map
-              </button>
-            </div>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "12px" }}>
-            <span style={{ fontSize: "12px", color: "var(--t2)" }}>
-              {filteredProblems.length} problems found
-            </span>
             <select
               style={{
                 border: "none",
@@ -292,13 +209,44 @@ export function DashboardScreen({ onShowDetail, onShowDisaster, onOpenDonate }: 
         </div>
       )}
 
+      {currentTab === "feed" && (
+        <div style={{ padding: "0 1.5rem", background: "#fff", borderBottom: "1px solid var(--bd)" }}>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <button
+              className={`btn ${viewMode === "feed" ? "btn-green" : ""}`}
+              style={{
+                background: viewMode === "feed" ? "var(--g)" : "var(--bg)",
+                color: viewMode === "feed" ? "#fff" : "var(--t2)",
+                padding: "6px 12px",
+                fontSize: "12px",
+              }}
+              onClick={() => setViewMode("feed")}
+            >
+              📋 Feed
+            </button>
+            <button
+              className={`btn ${viewMode === "map" ? "btn-green" : ""}`}
+              style={{
+                background: viewMode === "map" ? "var(--g)" : "var(--bg)",
+                color: viewMode === "map" ? "#fff" : "var(--t2)",
+                padding: "6px 12px",
+                fontSize: "12px",
+              }}
+              onClick={() => setViewMode("map")}
+            >
+              🗺️ Map
+            </button>
+          </div>
+        </div>
+      )}
+
       {currentTab === "feed" && viewMode === "map" ? (
         <ProblemMap
           problems={filteredProblems}
-          onProblemClick={handleProblemClick}
+          onProblemClick={() => onShowDetail?.()}
         />
       ) : (
-        <div className="cards-grid">
+      <div className="cards-grid">
           {currentTab === "feed" ? (
             filteredProblems.length === 0 ? (
               <div style={{ gridColumn: "1/-1", textAlign: "center", padding: "3rem", color: "var(--t2)" }}>
@@ -310,6 +258,7 @@ export function DashboardScreen({ onShowDetail, onShowDisaster, onOpenDonate }: 
               filteredProblems.map((p) => (
                 <ProblemCard
                   key={p.slug}
+                  id={p.slug}
                   emoji={p.emoji}
                   title={p.title}
                   raised={p.raised}
@@ -317,8 +266,13 @@ export function DashboardScreen({ onShowDetail, onShowDisaster, onOpenDonate }: 
                   donors={p.donors}
                   urgent={p.urgent}
                   verified={p.verified}
+                  category={p.category}
+                  isVerifiedHelper={true}
                   onClick={onShowDetail}
                   onDonate={onOpenDonate}
+                  onRespond={(problem) => {
+                    window.dispatchEvent(new CustomEvent("openResponseModal", { detail: problem }));
+                  }}
                 />
               ))
             )

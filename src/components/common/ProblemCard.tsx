@@ -1,4 +1,5 @@
 interface ProblemCardProps {
+  id?: string;
   emoji?: string;
   title: string;
   raised: number;
@@ -8,12 +9,16 @@ interface ProblemCardProps {
   verified?: boolean;
   live?: boolean;
   isDisaster?: boolean;
+  category?: string;
+  isVerifiedHelper?: boolean;
   onClick?: () => void;
   onDonate?: () => void;
   onJoin?: () => void;
+  onRespond?: (problem: { id: string; title: string; emoji: string; category: string }) => void;
 }
 
 export function ProblemCard({
+  id,
   emoji = "🧒",
   title,
   raised,
@@ -23,9 +28,12 @@ export function ProblemCard({
   verified = false,
   live: _live = false,
   isDisaster = false,
+  category = "general",
+  isVerifiedHelper = false,
   onClick,
   onDonate,
   onJoin,
+  onRespond,
 }: ProblemCardProps) {
   const pct = Math.min(Math.round((raised / goal) * 100), 100);
 
@@ -75,15 +83,33 @@ export function ProblemCard({
               Join Room
             </button>
           ) : (
-            <button
-              className="btn btn-green"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDonate?.();
-              }}
-            >
-              Donate Now
-            </button>
+            <div style={{ display: "flex", gap: "6px" }}>
+              {isVerifiedHelper && onRespond && (
+                <button
+                  className="btn"
+                  style={{
+                    background: "var(--b)",
+                    color: "white",
+                    border: "none",
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRespond?.({ id: id || "", title, emoji: emoji || "🧒", category });
+                  }}
+                >
+                  🤝 Respond
+                </button>
+              )}
+              <button
+                className="btn btn-green"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDonate?.();
+                }}
+              >
+                Donate
+              </button>
+            </div>
           )}
         </div>
       </div>
